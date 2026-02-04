@@ -1,0 +1,31 @@
+menu "Flexispot Configuration"
+
+    config FLEXISPOT_UART_NUM
+        int "UART port number"
+        default 1
+        range 0 2
+        help
+            UART port number for Flexispot communication.
+
+    config FLEXISPOT_TXD_PIN
+        int "UART TX GPIO pin"
+        default 5
+        range 0 48
+        help
+            GPIO pin for UART TX.
+
+    config FLEXISPOT_RXD_PIN
+        int "UART RX GPIO pin"
+        default 6
+        range 0 48
+        help
+            GPIO pin for UART RX.
+
+    config FLEXISPOT_DETECT_PIN
+        int "Detect GPIO pin"
+        default 7
+        range 0 48
+        help
+            GPIO pin for Flexispot detection.
+
+endmenu
