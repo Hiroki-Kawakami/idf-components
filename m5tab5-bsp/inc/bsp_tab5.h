@@ -15,7 +15,7 @@ typedef struct {
         bool interrupt;
     } touch;
     struct {
-        bool enable;
+        bsp_wifi_mode_t mode;
     } wifi;
     struct {
         bool enable;

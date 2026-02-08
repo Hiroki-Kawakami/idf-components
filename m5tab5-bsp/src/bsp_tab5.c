@@ -132,7 +132,7 @@ esp_err_t bsp_tab5_init(const bsp_tab5_config_t *config) {
         return ESP_ERR_NOT_FOUND;
     }
 
-    if (config->wifi.enable || config->bluetooth.enable) {
+    if (config->wifi.mode || config->bluetooth.enable) {
         // NVS (for WiFi & Bluetooth)
         err = nvs_flash_init();
         if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -147,14 +147,13 @@ esp_err_t bsp_tab5_init(const bsp_tab5_config_t *config) {
     }
 
     // WiFi
-    if (config->wifi.enable) {
-        ESP_LOGE(TAG, "WiFi initialization not implemented yet!");
-        assert(0);
-        // ESP_ERROR_CHECK(esp_netif_init());
-        // ESP_ERROR_CHECK(esp_event_loop_create_default());
-        // esp_netif_create_default_wifi_ap();
-        // wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-        // ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    if (config->wifi.mode) {
+        ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
+        if (config->wifi.mode & BSP_WIFI_MODE_STA) esp_netif_create_default_wifi_sta();
+        if (config->wifi.mode & BSP_WIFI_MODE_AP) esp_netif_create_default_wifi_ap();
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     }
 
     // Bluetooth
