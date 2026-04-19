@@ -1,3 +1,4 @@
+#include <string.h>
 #include "flexispot.h"
 #include "flexispot_config.h"
 #include "driver/uart.h"
@@ -131,7 +132,7 @@ static void display_packet_received(uint8_t *data, int size) {
     for (int i = 1; i <= 3; i++) display = (display << 8) | data[i];
     if (current_state.display == display) return;
 
-    ESP_LOGI(TAG, "Display Raw: %06X", display);
+    ESP_LOGI(TAG, "Display Raw: %06X", (unsigned int)display);
     flexispot_display_info_t info = decode_display_info(display);
     log_display_info(info);
     current_state.display = display;
