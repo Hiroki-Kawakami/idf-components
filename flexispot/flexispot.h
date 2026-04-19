@@ -38,6 +38,7 @@ uint32_t flexispot_get_display_data(void);
 flexispot_display_info_t flexispot_get_display_info(void);
 uint16_t flexispot_get_height(void);
 void flexispot_register_notify_callback(flexispot_notify_callback_t callback);
+void flexispot_turn_on_display();
 esp_err_t flexispot_init(void);
 
 #ifdef __cplusplus

@@ -208,6 +208,12 @@ static esp_err_t rx_task_start(void) {
     return ret ? ESP_OK : ESP_FAIL;
 }
 
+void flexispot_turn_on_display() {
+    gpio_set_level(FLEXISPOT_DETECT_PIN, 0);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    gpio_set_level(FLEXISPOT_DETECT_PIN, 1);
+}
+
 esp_err_t flexispot_init(void) {
     esp_err_t ret = ESP_OK;
 
