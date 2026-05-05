@@ -73,6 +73,8 @@ static void send_button_state(flexispot_button_t buttons) {
 static struct {
     uint32_t display;
     int height;
+    uint8_t nomove;
+    flexispot_state_t state;
 } current_state;
 static flexispot_notify_callback_t notify_callback;
 
@@ -137,15 +139,29 @@ static void display_packet_received(uint8_t *data, int size) {
     if (size != 7) return;
     uint32_t display = 0;
     for (int i = 1; i <= 3; i++) display = (display << 8) | data[i];
-    if (current_state.display == display) return;
+    bool displayChanged = current_state.display != display;
 
-    ESP_LOGI(TAG, "Display Raw: %06X", (unsigned int)display);
     flexispot_display_info_t info = decode_display_info(display);
-    log_display_info(info);
+    if (displayChanged) log_display_info(info);
     current_state.display = display;
-    if (info.type == FLEXISPOT_DISPLAY_HEIGHT) current_state.height = info.value;
+    if (info.type == FLEXISPOT_DISPLAY_HEIGHT) {
+        if (current_state.height < info.value) {
+            current_state.nomove = 0;
+            current_state.state = FLEXISPOT_STATE_ASCENDING;
+        } else if (current_state.height > info.value) {
+            current_state.nomove = 0;
+            current_state.state = FLEXISPOT_STATE_DESCENDING;
+        } else if (current_state.nomove >= 10) {
+            current_state.state = FLEXISPOT_STATE_STOP;
+        } else {
+            current_state.nomove++;
+        }
+        current_state.height = info.value;
+    } else {
+        current_state.state = FLEXISPOT_STATE_STOP;
+    }
     if (auto_adjust.height) {
-        if (info.type != FLEXISPOT_DISPLAY_HEIGHT ||
+        if ((info.type != FLEXISPOT_DISPLAY_HEIGHT && info.type != FLEXISPOT_DISPLAY_NONE) ||
             (flexispot_button_state == FLEXISPOT_BUTTON_UP && current_state.height > auto_adjust.height - 15) ||
             (flexispot_button_state == FLEXISPOT_BUTTON_DOWN && current_state.height < auto_adjust.height + 15) ||
             (flexispot_button_state != FLEXISPOT_BUTTON_UP && flexispot_button_state != FLEXISPOT_BUTTON_DOWN)) {
@@ -159,7 +175,7 @@ static void display_packet_received(uint8_t *data, int size) {
             }
         }
     }
-    if (notify_callback) notify_callback(info);
+    if (notify_callback) notify_callback(info, displayChanged);
 }
 
 uint32_t flexispot_get_display_data(void) {
@@ -252,6 +268,10 @@ void flexispot_set_height_auto(int height) {
 void flexispot_stop_auto_adjust(void) {
     auto_adjust.height = 0;
     flexispot_button_state = FLEXISPOT_BUTTON_NONE;
+}
+
+flexispot_state_t flexispot_get_state(void) {
+    return current_state.state;
 }
 
 esp_err_t flexispot_init(void) {

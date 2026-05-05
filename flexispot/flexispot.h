@@ -34,7 +34,13 @@ typedef struct {
     int16_t value;
 } __attribute__((packed)) flexispot_display_info_t;
 
-typedef void (*flexispot_notify_callback_t)(flexispot_display_info_t info);
+typedef enum __attribute__((packed)) {
+    FLEXISPOT_STATE_STOP,
+    FLEXISPOT_STATE_ASCENDING,
+    FLEXISPOT_STATE_DESCENDING,
+} flexispot_state_t;
+
+typedef void (*flexispot_notify_callback_t)(flexispot_display_info_t info, bool changed);
 
 void flexispot_set_button_state(flexispot_button_t buttons);
 uint32_t flexispot_get_display_data(void);
@@ -44,6 +50,7 @@ void flexispot_register_notify_callback(flexispot_notify_callback_t callback);
 void flexispot_turn_on_display(void);
 void flexispot_set_height_auto(int height);
 void flexispot_stop_auto_adjust(void);
+flexispot_state_t flexispot_get_state(void);
 esp_err_t flexispot_init(void);
 
 #ifdef __cplusplus
