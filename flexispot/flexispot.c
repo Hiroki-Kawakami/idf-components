@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include "flexispot.h"
 #include "flexispot_config.h"
@@ -10,9 +11,15 @@
 
 static const char *TAG = "flexispot";
 
-flexispot_button_t flexispot_button_state = FLEXISPOT_BUTTON_NONE;
+static flexispot_button_t flexispot_button_state = FLEXISPOT_BUTTON_NONE;
+static struct {
+    int height;
+    int last_height;
+    uint8_t nomove;
+} auto_adjust;
 
 void flexispot_set_button_state(flexispot_button_t buttons) {
+    auto_adjust.height = 0;
     flexispot_button_state = buttons;
 }
 
@@ -137,6 +144,21 @@ static void display_packet_received(uint8_t *data, int size) {
     log_display_info(info);
     current_state.display = display;
     if (info.type == FLEXISPOT_DISPLAY_HEIGHT) current_state.height = info.value;
+    if (auto_adjust.height) {
+        if (info.type != FLEXISPOT_DISPLAY_HEIGHT ||
+            (flexispot_button_state == FLEXISPOT_BUTTON_UP && current_state.height > auto_adjust.height - 15) ||
+            (flexispot_button_state == FLEXISPOT_BUTTON_DOWN && current_state.height < auto_adjust.height + 15) ||
+            (flexispot_button_state != FLEXISPOT_BUTTON_UP && flexispot_button_state != FLEXISPOT_BUTTON_DOWN)) {
+            flexispot_stop_auto_adjust();
+        } else {
+            if (current_state.height == auto_adjust.last_height) {
+                if (++auto_adjust.nomove > 10) flexispot_stop_auto_adjust();
+            } else {
+                auto_adjust.nomove = 0;
+                auto_adjust.last_height = current_state.height;
+            }
+        }
+    }
     if (notify_callback) notify_callback(info);
 }
 
@@ -212,6 +234,24 @@ void flexispot_turn_on_display() {
     gpio_set_level(FLEXISPOT_DETECT_PIN, 0);
     vTaskDelay(pdMS_TO_TICKS(200));
     gpio_set_level(FLEXISPOT_DETECT_PIN, 1);
+}
+
+void flexispot_set_height_auto(int height) {
+    if (flexispot_button_state || abs(current_state.height - height) < 5 ||
+        current_state.height < FLEXISPOT_HEIGHT_MIN || current_state.height > FLEXISPOT_HEIGHT_MAX) return;
+    if (height < FLEXISPOT_HEIGHT_MIN) height = FLEXISPOT_HEIGHT_MIN;
+    if (height > FLEXISPOT_HEIGHT_MAX) height = FLEXISPOT_HEIGHT_MAX;
+    ESP_LOGI(TAG, "Start auto adjust: %d->%d", current_state.height, height);
+
+    auto_adjust.last_height = current_state.height;
+    auto_adjust.nomove = 0;
+    flexispot_button_state = height > current_state.height ? FLEXISPOT_BUTTON_UP : FLEXISPOT_BUTTON_DOWN;
+    auto_adjust.height = height;
+}
+
+void flexispot_stop_auto_adjust(void) {
+    auto_adjust.height = 0;
+    flexispot_button_state = FLEXISPOT_BUTTON_NONE;
 }
 
 esp_err_t flexispot_init(void) {
